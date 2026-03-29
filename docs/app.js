@@ -14,7 +14,7 @@ const els = {
   fullscreenContent: document.getElementById("fullscreen-content"),
 };
 
-const WORKER_BASE = "https://docsconvert.shrestha.cv";
+const WORKER_BASE = "https://api.docsconvert.shrestha.cv";
 const lastDispatchKey = "docx-md-last-dispatch";
 let mediaUrlMap = new Map();
 let mediaBlobUrls = [];
