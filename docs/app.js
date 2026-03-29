@@ -83,9 +83,26 @@ async function uploadDocx() {
     method: "POST",
     body: form,
   });
-  const uploadJson = await uploadRes.json();
-  if (!uploadRes.ok || !uploadJson.ok) {
-    throw new Error(uploadJson.error || "Upload failed. Try again.");
+  const rawText = await uploadRes.text();
+  let uploadJson = null;
+  try {
+    uploadJson = rawText ? JSON.parse(rawText) : null;
+  } catch {
+    uploadJson = null;
+  }
+  if (!uploadRes.ok) {
+    throw new Error(
+      (uploadJson && uploadJson.error) ||
+        rawText ||
+        "Upload failed. Check your Worker URL."
+    );
+  }
+  if (!uploadJson || !uploadJson.ok) {
+    throw new Error(
+      (uploadJson && uploadJson.error) ||
+        rawText ||
+        "Upload failed. Invalid Worker response."
+    );
   }
 
   localStorage.setItem(lastDispatchKey, String(Date.now()));
