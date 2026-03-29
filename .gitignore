@@ -1,0 +1,8 @@
+# Local artifacts
+/a.md
+/media/
+/a.pdf.pdf
+
+# OS
+.DS_Store
+Thumbs.db
