@@ -2,6 +2,6 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "docsconvert",
   "main": "worker/index.js",
-  "compatibility_date": "2026-03-30",
+  "compatibility_date": "2026-03-29",
   "workers_dev": true
 }
