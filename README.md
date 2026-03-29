@@ -16,7 +16,7 @@ Enable GitHub Pages (repo Settings -> Pages) and select:
 
 Update the Worker URL in `docs/app.js`:
 ```
-const WORKER_BASE = "https://api.docsconvert.shrestha.cv";
+const WORKER_BASE = "https://api.docsc.shrestha.cv";
 ```
 
 ## Cloudflare Worker Setup
@@ -28,3 +28,27 @@ Upload the Worker code:
 1. Open the Worker -> Edit code
 2. Replace contents with `worker/index.js` from this repo
 3. Deploy
+
+Add environment variables (Settings -> Variables):
+- `GITHUB_OWNER` = your GitHub username or org
+- `GITHUB_REPO` = this repo name
+- `GITHUB_BRANCH` = `main`
+
+Add a secret (Settings -> Secrets):
+- `GITHUB_TOKEN` = fine-grained PAT with:
+  - Actions: Read and write
+  - Contents: Read (optional)
+
+Optional custom subdomain route:
+- Workers & Pages -> your Worker -> Settings -> Triggers -> Routes
+- Route: `api.docsc.shrestha.cv/*` -> your Worker
+
+## Usage (Public Site)
+1. Open the GitHub Pages URL.
+2. Upload your `.docx`.
+3. Click Download to get the Markdown + media zip.
+4. Edit in the live editor and preview instantly.
+
+## Notes
+- The workflow runs only on manual dispatch.
+- Outputs are stored as artifacts, not committed to the repo.
