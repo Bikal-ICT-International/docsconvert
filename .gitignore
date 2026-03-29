@@ -1,7 +1,7 @@
-# Local artifacts
-/a.md
+# Local artifacts and files
 /media/
-/a.pdf.pdf
+/input/
+/output/
 
 # OS
 .DS_Store

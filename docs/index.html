@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DOCX to Markdown Converter</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <header>
+        <h1>DOCX to Markdown</h1>
+        <p class="sub">Upload a .docx, get a Markdown + media zip back from GitHub Actions.</p>
+      </header>
+
+      <section class="card">
+        <h2>1. Upload DOCX</h2>
+        <input id="file" type="file" accept=".docx" />
+        <div class="row">
+          <button id="upload" disabled>Upload</button>
+        </div>
+        <p class="hint">Uploads temporarily, and triggers the document conversiontion>
+
+      <section class="card">
+        <h2>2. Download output</h2>
+        <div class="row">
+          <button id="download" disabled>Download latest converted artifact</button>
+          <button id="check" class="ghost" disabled>Check status</button>
+        </div>
+        <p class="hint">Downloads the most recent converted artifact and loads it into the editor.</p>
+      </section>
+
+      <section class="card">
+        <h2>3. Edit & Preview</h2>
+        <div class="editor-tools">
+          <button id="add-image" class="ghost">Add image</button>
+          <button id="fullscreen" class="ghost">Full screen preview</button>
+          <input id="image-file" type="file" accept="image/*" hidden />
+        </div>
+        <div class="editor-wrap">
+          <label class="editor-col">
+            Markdown
+            <textarea id="editor" rows="14" placeholder="Markdown will load here after download..."></textarea>
+          </label>
+          <div class="preview-col">
+            <div class="preview-label">Preview</div>
+            <div id="preview" class="preview"></div>
+          </div>
+        </div>
+        <p class="hint">Edits update the preview instantly. Image links are resolved from the downloaded media files.</p>
+      </section>
+
+      <div id="fullscreen-overlay" class="fullscreen-overlay" aria-hidden="true">
+        <div class="fullscreen-bar">
+          <div class="fullscreen-title">Preview</div>
+          <button id="exit-fullscreen" class="ghost">Exit</button>
+        </div>
+        <div id="fullscreen-content" class="fullscreen-content"></div>
+      </div>
+
+      <section class="card">
+        <h2>Status</h2>
+        <pre id="status" class="status" aria-live="polite"></pre>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip/dist/jszip.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

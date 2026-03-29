@@ -1,48 +1,53 @@
 name: Convert DOCX to Markdown
 
 on:
-  push:
-    branches: [ main ]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      docx_url:
+        description: "Temporary URL to the uploaded .docx file"
+        required: true
+        type: string
+      docx_name:
+        description: "Original .docx file name"
+        required: true
+        type: string
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   convert:
-    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Install pandoc
         run: |
           sudo apt-get update
           sudo apt-get install -y pandoc
 
-      - name: Convert DOCX files
+      - name: Download DOCX
         shell: bash
+        env:
+          DOCX_URL: ${{ inputs.docx_url }}
+          DOCX_NAME: ${{ inputs.docx_name }}
         run: |
           set -euo pipefail
-          shopt -s nullglob
-          mkdir -p output
-          for f in input/*.docx; do
-            base="$(basename "$f" .docx)"
-            outdir="output/$base"
-            mkdir -p "$outdir"
-            pandoc -t gfm --extract-media "$outdir/media" "$f" -o "$outdir/$base.md"
-          done
+          mkdir -p input
+          curl -L "$DOCX_URL" -o "input/$DOCX_NAME"
+
+      - name: Convert DOCX
+        shell: bash
+        env:
+          DOCX_NAME: ${{ inputs.docx_name }}
+        run: |
+          set -euo pipefail
+          base="$(basename "$DOCX_NAME" .docx)"
+          outdir="output/$base"
+          mkdir -p "$outdir"
+          pandoc -t gfm --extract-media "$outdir/media" "input/$DOCX_NAME" -o "$outdir/$base.md"
 
       - name: Upload outputs as artifact
         uses: actions/upload-artifact@v4
         with:
           name: markdown-and-media
           path: output
-
-      - name: Commit outputs to repo
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "Add converted Markdown and media"
-          file_pattern: output
