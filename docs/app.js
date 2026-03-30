@@ -28,6 +28,7 @@ let isSyncingFromPreview = false;
 let isSyncingFromEditor = false;
 const smoothScroll = true;
 const smoothScrollThreshold = 240;
+let pendingImageSync = false;
 
 function setStatus(message) {
   const now = new Date().toLocaleTimeString();
@@ -66,6 +67,11 @@ function renderMarkdown(md) {
   previewHeadingMap = buildHeadingMap(md, els.preview);
   if (els.fullscreenContent) {
     fullscreenHeadingMap = buildHeadingMap(md, els.fullscreenContent);
+  }
+  syncPreviewToEditor();
+  wireImageLoadSync(els.preview, "preview");
+  if (els.fullscreenContent) {
+    wireImageLoadSync(els.fullscreenContent, "fullscreen");
   }
 }
 
@@ -143,6 +149,38 @@ function syncPreviewToEditor() {
   window.setTimeout(() => {
     isSyncingFromEditor = false;
   }, 120);
+}
+
+function wireImageLoadSync(container, tag) {
+  if (!container) return;
+  const images = Array.from(container.querySelectorAll("img"));
+  images.forEach((img) => {
+    if (img.dataset.syncBound === tag) return;
+    img.dataset.syncBound = tag;
+    if (!img.complete) {
+      img.addEventListener(
+        "load",
+        () => {
+          if (pendingImageSync) return;
+          pendingImageSync = true;
+          window.requestAnimationFrame(() => {
+            pendingImageSync = false;
+            if (lastRenderedMarkdown) {
+              previewHeadingMap = buildHeadingMap(lastRenderedMarkdown, els.preview);
+              if (els.fullscreenContent) {
+                fullscreenHeadingMap = buildHeadingMap(
+                  lastRenderedMarkdown,
+                  els.fullscreenContent
+                );
+              }
+            }
+            syncPreviewToEditor();
+          });
+        },
+        { once: true }
+      );
+    }
+  });
 }
 
 function getClosestHeadingIndex(map, scrollTop) {
