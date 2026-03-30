@@ -16,7 +16,7 @@ Enable GitHub Pages (repo Settings -> Pages) and select:
 
 Update the Worker URL in `docs/app.js`:
 ```
-const WORKER_BASE = "https://api.docsc.shrestha.cv";
+const WORKER_BASE = "https://docsconvert.bikstudy.workers.dev";
 ```
 
 ## Cloudflare Worker Setup
