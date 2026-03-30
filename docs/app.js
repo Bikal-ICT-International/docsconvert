@@ -18,6 +18,16 @@ const WORKER_BASE = "https://docsconvert.bikstudy.workers.dev";
 const lastDispatchKey = "docx-md-last-dispatch";
 let mediaUrlMap = new Map();
 let mediaBlobUrls = [];
+let lastRenderedMarkdown = "";
+let previewHeadingMap = [];
+let fullscreenHeadingMap = [];
+let syncRaf = null;
+let fullscreenSyncRaf = null;
+let previewSyncRaf = null;
+let isSyncingFromPreview = false;
+let isSyncingFromEditor = false;
+const smoothScroll = true;
+const smoothScrollThreshold = 240;
 
 function setStatus(message) {
   const now = new Date().toLocaleTimeString();
@@ -52,6 +62,11 @@ function renderMarkdown(md) {
   if (els.fullscreenContent) {
     els.fullscreenContent.innerHTML = html;
   }
+  lastRenderedMarkdown = md;
+  previewHeadingMap = buildHeadingMap(md, els.preview);
+  if (els.fullscreenContent) {
+    fullscreenHeadingMap = buildHeadingMap(md, els.fullscreenContent);
+  }
 }
 
 function insertAtCursor(textarea, text) {
@@ -62,6 +77,107 @@ function insertAtCursor(textarea, text) {
   textarea.value = `${before}${text}${after}`;
   const caret = start + text.length;
   textarea.setSelectionRange(caret, caret);
+}
+
+function extractMarkdownHeadings(md) {
+  const lines = md.split(/\r?\n/);
+  const headings = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    const match = line.match(/^(#{1,6})\s+(.+?)\s*$/);
+    if (!match) continue;
+    const text = match[2].replace(/\s+/g, " ").trim();
+    headings.push({ line: i, text });
+  }
+  return headings;
+}
+
+function buildHeadingMap(md, container) {
+  if (!container) return [];
+  const mdHeadings = extractMarkdownHeadings(md);
+  const renderedHeadings = Array.from(
+    container.querySelectorAll("h1, h2, h3, h4, h5, h6")
+  );
+  const count = Math.min(mdHeadings.length, renderedHeadings.length);
+  const map = [];
+  for (let i = 0; i < count; i += 1) {
+    map.push({ line: mdHeadings[i].line, el: renderedHeadings[i] });
+  }
+  return map;
+}
+
+function getCurrentEditorLine() {
+  const style = window.getComputedStyle(els.editor);
+  const lineHeight = Number.parseFloat(style.lineHeight) || 18;
+  return Math.max(0, Math.round(els.editor.scrollTop / lineHeight));
+}
+
+function syncPreviewToEditor() {
+  if (isSyncingFromPreview) return;
+  const activeFullscreen =
+    els.fullscreenOverlay && els.fullscreenOverlay.classList.contains("active");
+  const map = activeFullscreen ? fullscreenHeadingMap : previewHeadingMap;
+  const container = activeFullscreen ? els.fullscreenContent : els.preview;
+  if (!map.length || !container) return;
+
+  const line = getCurrentEditorLine();
+  let idx = 0;
+  for (let i = 0; i < map.length; i += 1) {
+    if (map[i].line <= line) {
+      idx = i;
+    } else {
+      break;
+    }
+  }
+  const target = map[idx].el;
+  if (!target) return;
+  const nextTop = Math.max(0, target.offsetTop - 8);
+  const distance = Math.abs(container.scrollTop - nextTop);
+  const shouldSmooth = smoothScroll && distance < smoothScrollThreshold;
+  isSyncingFromEditor = true;
+  if (shouldSmooth && typeof container.scrollTo === "function") {
+    container.scrollTo({ top: nextTop, behavior: "smooth" });
+  } else {
+    container.scrollTop = nextTop;
+  }
+  window.setTimeout(() => {
+    isSyncingFromEditor = false;
+  }, 120);
+}
+
+function getClosestHeadingIndex(map, scrollTop) {
+  let idx = 0;
+  let best = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < map.length; i += 1) {
+    const distance = Math.abs(map[i].el.offsetTop - scrollTop);
+    if (distance < best) {
+      best = distance;
+      idx = i;
+    }
+  }
+  return idx;
+}
+
+function syncEditorToPreview(map, scrollTop) {
+  if (!map.length) return;
+  if (isSyncingFromEditor) return;
+  const idx = getClosestHeadingIndex(map, scrollTop);
+  const heading = map[idx];
+  if (!heading) return;
+  const style = window.getComputedStyle(els.editor);
+  const lineHeight = Number.parseFloat(style.lineHeight) || 18;
+  const targetTop = Math.max(0, heading.line * lineHeight);
+  const distance = Math.abs(els.editor.scrollTop - targetTop);
+  const shouldSmooth = smoothScroll && distance < smoothScrollThreshold;
+  isSyncingFromPreview = true;
+  if (shouldSmooth && typeof els.editor.scrollTo === "function") {
+    els.editor.scrollTo({ top: targetTop, behavior: "smooth" });
+  } else {
+    els.editor.scrollTop = targetTop;
+  }
+  window.setTimeout(() => {
+    isSyncingFromPreview = false;
+  }, 120);
 }
 
 function refreshButtons() {
@@ -210,6 +326,14 @@ els.editor.addEventListener("input", (event) => {
   renderMarkdown(event.target.value || "");
 });
 
+els.editor.addEventListener("scroll", () => {
+  if (syncRaf) return;
+  syncRaf = window.requestAnimationFrame(() => {
+    syncRaf = null;
+    syncPreviewToEditor();
+  });
+});
+
 els.addImage.addEventListener("click", () => {
   if (els.imageFile) els.imageFile.click();
 });
@@ -232,8 +356,16 @@ els.imageFile.addEventListener("change", async (event) => {
 
 els.fullscreen.addEventListener("click", () => {
   if (!els.fullscreenOverlay) return;
+  if (els.fullscreenContent) {
+    els.fullscreenContent.innerHTML = els.preview.innerHTML;
+    fullscreenHeadingMap = buildHeadingMap(
+      lastRenderedMarkdown,
+      els.fullscreenContent
+    );
+  }
   els.fullscreenOverlay.classList.add("active");
   els.fullscreenOverlay.setAttribute("aria-hidden", "false");
+  syncPreviewToEditor();
 });
 
 els.exitFullscreen.addEventListener("click", () => {
@@ -241,3 +373,26 @@ els.exitFullscreen.addEventListener("click", () => {
   els.fullscreenOverlay.classList.remove("active");
   els.fullscreenOverlay.setAttribute("aria-hidden", "true");
 });
+
+if (els.fullscreenContent) {
+  els.fullscreenContent.addEventListener("scroll", () => {
+    if (fullscreenSyncRaf) return;
+    fullscreenSyncRaf = window.requestAnimationFrame(() => {
+      fullscreenSyncRaf = null;
+      syncEditorToPreview(
+        fullscreenHeadingMap,
+        els.fullscreenContent.scrollTop
+      );
+    });
+  });
+}
+
+if (els.preview) {
+  els.preview.addEventListener("scroll", () => {
+    if (previewSyncRaf) return;
+    previewSyncRaf = window.requestAnimationFrame(() => {
+      previewSyncRaf = null;
+      syncEditorToPreview(previewHeadingMap, els.preview.scrollTop);
+    });
+  });
+}
