@@ -30,7 +30,7 @@ Upload the Worker code:
 3. Deploy
 
 Add environment variables (Settings -> Variables):
-- `GITHUB_OWNER` = your GitHub username or org
+- `GITHUB_OWNER` = GitHub username
 - `GITHUB_REPO` = this repo name
 - `GITHUB_BRANCH` = `main`
 
@@ -41,7 +41,7 @@ Add a secret (Settings -> Secrets):
 
 Optional custom subdomain route:
 - Workers & Pages -> your Worker -> Settings -> Triggers -> Routes
-- Route: `api.docsc.shrestha.cv/*` -> your Worker
+- Route: `api.docsc.shrestha.cv/*` -> Cloudflare Worker
 
 ## Usage (Public Site)
 1. Open the GitHub Pages URL.
